@@ -1,3 +1,9 @@
-.scrub {
-  border: 1px solid blue;
+.scrub_widget {
+  cursor: ew-resize;
+  border-bottom: 1px dashed #9bb;
+  z-index: 100;
+  display: inline;
+}
+.dragging {
+  cursor: ew-resize;
 }

@@ -1,38 +1,96 @@
 (function() {
   "use strict";
 
-  CodeMirror.__values = {};
+  var editing = false,
+      nextId = 0,
+      $values = {};
 
   CodeMirror.defineOption("interactiveNumbers", false, function(cm, val, old) {
     var prev = old && old != CodeMirror.Init;
     if (val) {
-      // cm.on("update", setInteractive);
+      cm.on("change", setInteractive);
 
       setInteractive(cm);
     }
   });
 
-  function setInteractive(cm) {
-    var currentText = cm.options.value,
+  function setInteractive(cm, changeObj) {
+
+    var currentText,
         scrubbableLinks = [],
         key, val, newTree, range, pos,
+        start, end,
         hasReloaded = false,
-        toRun = [];
+        toRun = [],
+        clsName = 'scrub_widget';
 
-    var syntax = findLiterals(esprima.parse(currentText, {raw: true, loc: true, range: true}));
+    currentText = cm.getValue() || cm.options.value;
 
-    var out = escodegen.generate(syntax.ast);
-    cm.setValue(out);
+    if (!editing) {
+      editing = true;
+      
+      // TODO: Clean up after ourselves
+      try {
+        var syntax = findLiterals(cm, esprima.parse(currentText, {range: true}));
+        var out = escodegen.generate(syntax.ast);
+        
+        var widgets = [];
 
-    for (key in syntax.values) {
-      val = syntax.values[key],
-          range = val.range,
-          pos = val.loc;
-      cm.setSelection(pos.start, pos.end);
-      var cur = cm.getCursor(),
-          line = cm.getLine(cur.line);
+        $values += syntax.values;
+        console.log(syntax.values);
+        for (key in syntax.values) {
+          val = syntax.values[key],
+                start = val.start,
+                end = val.end;
 
-      cm.setSelection({line: cur.line, ch: pos.start.column}, {line: cur.line, ch: pos.end.column});
+          var editableWidget = document.createElement('span');
+          editableWidget.className = clsName;
+          editableWidget.textContent = val.value;
+          editableWidget.id = key;
+          widgets.push(editableWidget);
+
+          var range = cm.markText(start, end, {
+            handleMouseEvents: true,
+            replacedWith: editableWidget,
+            shared: true,
+            addToHistory: true
+          });
+        }
+        attachInteractivity(widgets);
+      } catch(e) {
+        console.log(e);
+      }
+      editing = false;
+    }
+  }
+
+  function attachInteractivity(elems) {
+    var ele, i;
+
+    for (i = 0; i < elems.length; i++) {
+      ele = elems[i];
+      ele.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        var mx = e.pageX,
+            my = e.pageY,
+            orig = Number(ele.textContent),
+            delta = orig;
+
+        ele.classList.add('dragging');
+        var moved = function(e) {
+          e.preventDefault();
+          var d = Number((Math.round((e.pageX - mx)/2) + orig).toFixed(5));
+          ele.textContent = d;
+          $values[ele.id].value = d;
+        };
+        window.addEventListener('mousemove', moved);
+        var up = function(e) {
+          window.removeEventListener('mousemove', moved);
+          window.removeEventListener('mouseup', up);
+          ele.classList.remove('dragging');
+        };
+        window.addEventListener('mouseup', up);
+      });
     }
   }
 
@@ -41,30 +99,21 @@
   * that are numbers (possibly do some introspection in the future)
   * and create a new expression (hijack the syntax tree)
   */
-  function findLiterals(tree) {
-    var nextId = 0,
-        _values = {},
+  function findLiterals(cm, tree) {
+    var _values = {},
         prefix = 'interactive_';
 
     var markLiterals = function(e) {
       var id;
       if (e.type === 'Literal' && typeof e.value === 'number') {
+        if (nextId >= 2048) { nextId = 0; };
         id = nextId++;
         _values[prefix + id] = {
           range: e.range,
           value: e.value,
-          loc: {
-            start: {
-              column: e.loc.start.column,
-              line: e.loc.start.line
-            },
-            end: {
-              column: e.loc.end.column,
-              line: e.loc.end.line
-            }
-          }
+          start: cm.posFromIndex(e.range[0]),
+          end: cm.posFromIndex(e.range[1])
         };
-        console.log(e);
       } else {
         recursiveWalk(e, markLiterals);
       }
