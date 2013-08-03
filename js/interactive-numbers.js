@@ -36,8 +36,7 @@
         
         var widgets = [];
 
-        $values += syntax.values;
-        console.log(syntax.values);
+        $values = syntax.values;
         for (key in syntax.values) {
           val = syntax.values[key],
                 start = val.start,
