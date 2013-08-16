@@ -3,6 +3,8 @@
   border-bottom: 1px dashed #9bb;
   z-index: 100;
   display: inline;
+  background: transparent;
+  border: 1px solid green;
 }
 .dragging {
   cursor: ew-resize;
