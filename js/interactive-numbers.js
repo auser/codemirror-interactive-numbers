@@ -2,13 +2,13 @@
   "use strict";
 
   var editing = false,
-      nextId = 0,
+      nextId = 1,
       $values = {};
 
   CodeMirror.defineOption("interactiveNumbers", false, function(cm, val, old) {
     var prev = old && old != CodeMirror.Init;
     if (val) {
-      cm.on("change", setInteractive);
+      cm.on("beforeChange", setInteractive);
 
       setInteractive(cm);
     }
@@ -32,7 +32,6 @@
       // TODO: Clean up after ourselves
       try {
         var syntax = findLiterals(cm, esprima.parse(currentText, {range: true}));
-        var out = escodegen.generate(syntax.ast);
         
         var widgets = [];
 
