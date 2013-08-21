@@ -47,17 +47,55 @@
 
       # $options.values = exports.interactiveOptions.values
       editing = false
+
+  deltaForNumber = (n) ->
+    # directly from scrubby
+    # big ol' hax to get an approximately okay order-of-magnitude delta for
+    # dragging a number around.
+    # right now this has a tendency to make your number more specific all the
+    # time, which might be problematic.
+    return 1 if n is 0
+    return 0.1 if n is 1
+
+    lastDigit = (n) ->
+      Math.round((n/10-Math.floor(n/10))*10)
+
+    firstSig = (n) ->
+      n = Math.abs(n)
+      i = 0
+      while lastDigit(n) is 0
+        i++
+        n /= 10
+      i
+
+    specificity = (n) ->
+      s = 0
+      loop
+        abs = Math.abs(n)
+        fraction = abs - Math.floor(abs)
+        if fraction < 0.000001
+          return s
+        s++
+        n = n * 10
+
+    s = specificity n
+    if s > 0
+      Math.pow(10, -s)
+    else
+      n = Math.abs n
+      Math.pow 10, Math.max 0, firstSig(n)-1
+
   attachInteractivity = (ele, val, cm) ->
     ele.addEventListener "mousedown", (e) ->
       e.preventDefault()
       mx = e.pageX
       my = e.pageY
       orig = Number(ele.textContent)
-      delta = orig
+      delta = deltaForNumber orig
       ele.classList.add "dragging"
       moved = (e) ->
         e.preventDefault()
-        d = Number((Math.round((e.pageX - mx) / 2) + orig).toFixed(5))
+        d = Number((Math.round((e.pageX - mx)/2)*delta + orig).toFixed(5))
         ele.textContent = d
         $options.values[ele.id].value = d
         cm.replaceRange(String(d), val.start, val.end)
