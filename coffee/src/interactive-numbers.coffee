@@ -1,8 +1,8 @@
 (->
   "use strict"
   esprima = require("esprima")
-  escodegen = require("escodegen")
   CodeMirror = global.CodeMirror #|| require('code-mirror')
+  Pos = CodeMirror.Pos
   exports.interactiveOptions = $options = {}
   editing = false
 
@@ -93,12 +93,37 @@
       orig = Number(ele.textContent)
       delta = deltaForNumber orig
       ele.classList.add "dragging"
+      originalStart = val.start 
+      originalEnd = val.end 
+
       moved = (e) ->
         e.preventDefault()
         d = Number((Math.round((e.pageX - mx)/2)*delta + orig).toFixed(5))
+        origNumber = ele.textContent
+        origNumberLength = origNumber.toString().length
+        newNumberLength = d.toString().length
+        lengthDiff = newNumberLength - origNumberLength
+
         ele.textContent = d
         $options.values[ele.id].value = d
-        cm.replaceRange(String(d), val.start, val.end)
+        line = cm.getLine(val.start.line)
+
+        startOfString = line.substr(0, val.start.ch)
+        endOfString = line.substr(val.end.ch, line.length)
+        newString = startOfString + String(d) + endOfString
+
+        if lengthDiff < 0 # a delete
+          endPos = newString.length - lengthDiff
+        else if lengthDiff > 0 # an add
+          endPos = newString.length + lengthDiff
+        else # a replace
+          endPos = newString.length
+        
+        cm.replaceRange(newString, Pos(val.start.line, 0), Pos(val.start.line, endPos))
+
+        val.start = Pos(val.start.line, startOfString.length)
+        val.end = Pos(val.start.line, (startOfString + String(d)).length)
+
 
         if $options.onChange
           $options.onChange($options.values)
