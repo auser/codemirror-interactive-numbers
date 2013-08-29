@@ -98,7 +98,9 @@
 
       moved = (e) ->
         e.preventDefault()
+        delta = 0.001 if delta.toFixed(5).toString() == "0.00000" # try scrubbing 0.94
         d = Number((Math.round((e.pageX - mx)/2)*delta + orig).toFixed(5))
+
         origNumber = ele.textContent
         origNumberLength = origNumber.toString().length
         newNumberLength = d.toString().length
