@@ -116,6 +116,9 @@
           var d, endOfString, endPos, lengthDiff, line, newNumberLength, newString, origNumber, origNumberLength, startOfString;
 
           e.preventDefault();
+          if (delta.toFixed(5).toString() === "0.00000") {
+            delta = 0.001;
+          }
           d = Number((Math.round((e.pageX - mx) / 2) * delta + orig).toFixed(5));
           origNumber = ele.textContent;
           origNumberLength = origNumber.toString().length;
